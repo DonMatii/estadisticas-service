@@ -10,7 +10,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/estadisticas")
-@CrossOrigin(origins = "http://localhost:5173") // Permitimos llamadas desde tu React local
+@CrossOrigin(origins = "*") // Permitimos llamadas libres desde el API Gateway y el frontend
 public class EstadisticasController {
 
     @GetMapping
