@@ -17,8 +17,10 @@ Diseñado y construido por **8 Digital**.
 | :--- | :--- | :--- |
 | `GET` | `/api/estadisticas` | Retorna un resumen con las métricas clave del sistema (total de productos en catálogo, categorías activas, estado operativo y versión). |
 
-## ⚙️ Despliegue Local
-Para ejecutar este microservicio en un entorno local:
+## ⚙️ Configuración y Despliegue Cloud (EC2)
+Como parte de la arquitectura cloud, este microservicio está diseñado para ser desplegado en instancias **Amazon EC2**, consumiendo sus endpoints exclusivamente a través de **AWS API Gateway**.
+
+Para probar este microservicio en un entorno de desarrollo:
 1. Asegurarse de tener el JDK 21 instalado.
 2. Abrir el proyecto en IntelliJ IDEA.
 3. Actualizar las dependencias de Maven.
