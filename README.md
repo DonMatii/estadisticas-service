@@ -2,6 +2,16 @@
 
 Microservicio backend secundario encargado de gestionar, calcular en tiempo real y exponer las métricas y estadísticas operativas del sistema **Pastelería My Dreams**, conectándose directamente a la base de datos relacional en la nube.
 
+## 📌 Versiones del proyecto
+
+| Rama | Versión | Contenido |
+| :--- | :--- | :--- |
+| `version-1` | **Entrega 1** | Métricas del catálogo calculadas en vivo desde AWS RDS. |
+| `version-2` | **Entrega 2** | Pendiente. |
+| `version-3` | **Unidad 3** | Pendiente. |
+
+`main` siempre lleva el último avance del desarrollo.
+
 ## 🏢 Equipo de Desarrollo
 Diseñado y construido por **8 Digital**.
 
