@@ -1,5 +1,6 @@
 package cl.ochodigital.pasteleriamydreams.estadisticasservice.controller;
 
+import cl.ochodigital.pasteleriamydreams.estadisticasservice.repository.EstadisticasRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -7,6 +8,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -17,6 +19,9 @@ public class EstadisticasController {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private EstadisticasRepository estadisticasRepository;
 
     @GetMapping
     public Map<String, Object> obtenerEstadisticas() {
@@ -35,6 +40,17 @@ public class EstadisticasController {
             // Si llega a haber algún detalle con la tabla, dejamos un respaldo seguro
             stats.put("totalProductosCatalogo", 17);
             stats.put("categoriasActivas", 4);
+        }
+
+        try {
+            // Estadísticas de pedidos reales que llegan por Kafka (RF-10)
+            EstadisticasRepository.MetricasPedidos metricas = estadisticasRepository.buscarMetricasPedidos();
+            stats.put("pedidosTotales", metricas.pedidosTotales());
+            stats.put("montoTotalPedidos", metricas.montoTotalPedidos());
+        } catch (Exception e) {
+            // Sin base disponible la respuesta sigue completa con ceros
+            stats.put("pedidosTotales", 0L);
+            stats.put("montoTotalPedidos", BigDecimal.ZERO);
         }
 
         stats.put("estadoServicio", "OPERATIVO");

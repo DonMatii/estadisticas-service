@@ -43,10 +43,30 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- Kafka: consumidor del topic de pedidos para calcular estadísticas reales (RF-10) -->
+        <dependency>
+            <groupId>org.springframework.kafka</groupId>
+            <artifactId>spring-kafka</artifactId>
+        </dependency>
+
         <!-- Starter de pruebas correcto -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Broker Kafka embebido para las pruebas de integración del consumidor -->
+        <dependency>
+            <groupId>org.springframework.kafka</groupId>
+            <artifactId>spring-kafka-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- H2 en memoria: base de datos hermética para las pruebas (no requiere MySQL) -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>

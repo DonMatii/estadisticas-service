@@ -29,6 +29,41 @@ Diseñado y construido por **8 Digital**.
 | :--- | :--- | :--- |
 | `GET` | `/api/estadisticas` | Consulta y retorna un resumen dinámico con las métricas clave del sistema en tiempo real (total de productos en catálogo, categorías activas, estado operativo y versión). |
 
+## 📈 Statistics from real orders (Kafka)
+
+Since RF-10, `GET /api/estadisticas` also includes statistics derived from **real orders** created in `pedidos-service` and delivered asynchronously through Kafka:
+
+- **Flow:** `pedidos-service` → Kafka topic `pedidos` (configurable via `app.kafka.topic`, default `pedidos`) → `PedidoCreadoListener` in this service → tables → `GET /api/estadisticas`
+- **Consumer group:** `estadisticas` (defined in `@KafkaListener`)
+
+### Tables (created automatically at startup with JdbcTemplate DDL)
+
+| Table | Purpose |
+| :--- | :--- |
+| `pedidos_procesados(pedido_id BIGINT PRIMARY KEY, procesado_en TIMESTAMP)` | Idempotency for Kafka at-least-once redelivery: the listener inserts the order id first; a duplicate key means the event was already counted, so it is skipped (never double-counted). |
+| `metricas_pedidos(id INT PRIMARY KEY, pedidos_totales BIGINT, monto_total DECIMAL(12,2), actualizado_en TIMESTAMP)` | Single aggregate row that is upserted on every new order (`pedidos_totales + 1`, `monto_total + total`). |
+
+### Event contract
+
+The listener consumes the exact JSON published by `pedidos-service` (`PedidoCreadoEvent`): `evento`, `id`, `cliente`, `email`, `producto`, `cantidad`, `total`, `fecha`. Malformed or unprocessable messages are logged and skipped (poison-pill tolerance) — the consumer never throws.
+
+### Response fields added
+
+`GET /api/estadisticas` keeps every existing field and adds:
+
+```json
+{
+  "totalProductosCatalogo": 17,
+  "categoriasActivas": 4,
+  "estadoServicio": "OPERATIVO",
+  "versionSistema": "1.0.0",
+  "pedidosTotales": 2,
+  "montoTotalPedidos": 48990.00
+}
+```
+
+`pedidosTotales` and `montoTotalPedidos` default to `0` when no orders have been processed yet or the database is unavailable.
+
 ## ⚙️ Configuración y Despliegue Cloud (EC2)
 Como parte de la arquitectura cloud, este microservicio está diseñado para ser desplegado en instancias **Amazon EC2**, consumiendo sus endpoints exclusivamente a través de **AWS API Gateway** y apuntando a la base de datos centralizada en **AWS RDS**.
 
