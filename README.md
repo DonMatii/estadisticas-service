@@ -29,6 +29,7 @@ Diseñado y construido por **8 Digital**.
 | Método HTTP | Ruta | Descripción |
 | :--- | :--- | :--- |
 | `GET` | `/api/estadisticas` | Consulta y retorna un resumen con las métricas clave del sistema: catálogo, estado del servicio, versión y estadísticas de pedidos reales recibidos por Kafka. |
+| `PUT` | `/api/estadisticas/metas` | Guarda las metas de ventas por período (`dia`, `semana`, `mes`) que la administración define para la barra de avance del dashboard. Cuerpo: `{ "dia": 80000, "semana": 400000, "mes": 1500000 }`. Devuelve las metas guardadas. |
 
 ### Respuesta
 
@@ -57,7 +58,8 @@ Ejemplo real de la verificación E2E (2 pedidos procesados):
     "dia":    { "desde": "2026-10-21", "hasta": "2026-10-21", "pedidos": 2, "monto": 40000.00 },
     "semana": { "desde": "2026-10-19", "hasta": "2026-10-21", "pedidos": 2, "monto": 40000.00 },
     "mes":    { "desde": "2026-10-01", "hasta": "2026-10-21", "pedidos": 2, "monto": 40000.00 }
-  }
+  },
+  "metas": { "dia": 80000.00, "semana": 400000.00, "mes": 1500000.00 }
 }
 ```
 
@@ -71,6 +73,7 @@ Ejemplo real de la verificación E2E (2 pedidos procesados):
 | `montoVentasHoy` | Monto vendido hoy, de la fila de hoy en `ventas_diarias`. |
 | `ventasDiarias` | Siempre **7 elementos**, de hoy hacia atrás: fecha, pedidos y monto de cada día. Los días sin ventas vienen en cero, para que el panel no muestre huecos. |
 | `ventasPeriodo` | Tres períodos **en curso** (hoy, semana desde el lunes ISO, mes desde el día 1) con su `desde`, `hasta`, `pedidos` y `monto`. Alimenta el selector de período del dashboard de administración. |
+| `metas` | Metas de ventas por período (`dia`, `semana`, `mes`) que la administración define con `PUT /api/estadisticas/metas`. En `0` significa meta sin definir (la barra de avance lo muestra como pendiente). |
 | `estadoServicio` | Siempre `OPERATIVO` cuando el servicio responde. |
 | `versionSistema` | Versión declarada del servicio (`1.0.0`). |
 

@@ -5,6 +5,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -78,6 +80,9 @@ public class EstadisticasController {
         ventasPeriodo.put("mes", periodo(hoy.withDayOfMonth(1), hoy));
         stats.put("ventasPeriodo", ventasPeriodo);
 
+        // Metas por período para la barra de avance; en cero significa "sin meta definida"
+        stats.put("metas", mapaMetas(estadisticasRepository.buscarMetas()));
+
         stats.put("estadoServicio", "OPERATIVO");
         stats.put("versionSistema", "1.0.0");
 
@@ -96,5 +101,37 @@ public class EstadisticasController {
         datos.put("pedidos", rango.pedidos());
         datos.put("monto", rango.monto());
         return datos;
+    }
+
+    // Guarda las metas de los tres períodos desde el panel de administración; cada campo
+    // ausente cuenta como meta 0, que el panel interpreta como "sin meta definida"
+    @PutMapping("/metas")
+    public Map<String, Object> guardarMetas(@RequestBody Map<String, Object> cuerpo) {
+        BigDecimal dia = aDecimal(cuerpo.get("dia"));
+        BigDecimal semana = aDecimal(cuerpo.get("semana"));
+        BigDecimal mes = aDecimal(cuerpo.get("mes"));
+        estadisticasRepository.guardarMetas(dia, semana, mes);
+        return mapaMetas(new EstadisticasRepository.Metas(dia, semana, mes));
+    }
+
+    // Las tres metas como mapa, compartido por el GET de stats y la respuesta del PUT
+    private Map<String, Object> mapaMetas(EstadisticasRepository.Metas metas) {
+        Map<String, Object> mapa = new HashMap<>();
+        mapa.put("dia", metas.dia());
+        mapa.put("semana", metas.semana());
+        mapa.put("mes", metas.mes());
+        return mapa;
+    }
+
+    // Convierte un valor del JSON a BigDecimal; ausente o no numérico cuenta como meta 0
+    private BigDecimal aDecimal(Object valor) {
+        if (valor instanceof Number numero) {
+            return new BigDecimal(numero.toString());
+        }
+        try {
+            return new BigDecimal(String.valueOf(valor));
+        } catch (NumberFormatException e) {
+            return BigDecimal.ZERO;
+        }
     }
 }

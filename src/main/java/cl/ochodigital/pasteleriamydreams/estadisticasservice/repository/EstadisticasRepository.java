@@ -67,6 +67,17 @@ public class EstadisticasRepository {
                         actualizado_en TIMESTAMP NOT NULL
                     )
                     """);
+            // Fila única de metas por período que la administración define para la barra
+            // de avance del dashboard; solo se agrega, no toca las tablas existentes
+            jdbcTemplate.execute("""
+                    CREATE TABLE IF NOT EXISTS metas (
+                        id INT PRIMARY KEY,
+                        meta_dia DECIMAL(12,2) NOT NULL,
+                        meta_semana DECIMAL(12,2) NOT NULL,
+                        meta_mes DECIMAL(12,2) NOT NULL,
+                        actualizado_en TIMESTAMP NOT NULL
+                    )
+                    """);
             log.info("Tablas de estadísticas de pedidos verificadas");
         } catch (Exception e) {
             log.warn("No se pudieron crear las tablas de estadísticas: {}", e.getMessage());
@@ -227,6 +238,51 @@ public class EstadisticasRepository {
         }
     }
 
+    // Lee la fila única de metas; sin fila o sin base devuelve ceros (meta sin definir)
+    public Metas buscarMetas() {
+        try {
+            return jdbcTemplate.query("""
+                    SELECT meta_dia, meta_semana, meta_mes FROM metas WHERE id = ?
+                    """, (rs, i) -> new Metas(
+                            rs.getBigDecimal("meta_dia"),
+                            rs.getBigDecimal("meta_semana"),
+                            rs.getBigDecimal("meta_mes")),
+                    FILA_UNICA)
+                    .stream()
+                    .findFirst()
+                    .orElse(new Metas(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO));
+        } catch (Exception e) {
+            log.warn("No se pudieron leer las metas: {}", e.getMessage());
+            return new Metas(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);
+        }
+    }
+
+    // Guarda las metas de los tres períodos en la fila única (mismo esquema que metricas)
+    @Transactional
+    public void guardarMetas(BigDecimal dia, BigDecimal semana, BigDecimal mes) {
+        int actualizadas = jdbcTemplate.update("""
+                UPDATE metas
+                SET meta_dia = ?, meta_semana = ?, meta_mes = ?, actualizado_en = CURRENT_TIMESTAMP
+                WHERE id = ?
+                """, dia, semana, mes, FILA_UNICA);
+
+        if (actualizadas == 0) {
+            try {
+                jdbcTemplate.update("""
+                        INSERT INTO metas (id, meta_dia, meta_semana, meta_mes, actualizado_en)
+                        VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+                        """, FILA_UNICA, dia, semana, mes);
+            } catch (DuplicateKeyException e) {
+                // Otra transacción creó la fila primero: se reaplica la actualización
+                jdbcTemplate.update("""
+                        UPDATE metas
+                        SET meta_dia = ?, meta_semana = ?, meta_mes = ?, actualizado_en = CURRENT_TIMESTAMP
+                        WHERE id = ?
+                        """, dia, semana, mes, FILA_UNICA);
+            }
+        }
+    }
+
     // Agregado simple que alimenta los campos pedidosTotales y montoTotalPedidos
     public record MetricasPedidos(Long pedidosTotales, BigDecimal montoTotalPedidos) {
     }
@@ -237,5 +293,9 @@ public class EstadisticasRepository {
 
     // Agregado de un rango de fechas: pedidos y monto sumados de ese período
     public record ResumenRango(Long pedidos, BigDecimal monto) {
+    }
+
+    // Las tres metas por período que define la administración para la barra de avance
+    public record Metas(BigDecimal dia, BigDecimal semana, BigDecimal mes) {
     }
 }
