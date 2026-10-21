@@ -53,6 +53,19 @@ public class EstadisticasController {
             stats.put("montoTotalPedidos", BigDecimal.ZERO);
         }
 
+        try {
+            // Ventas de hoy y ventana de los últimos 7 días para el panel de administración
+            EstadisticasRepository.VentaDiaria hoy = estadisticasRepository.buscarVentasDelDia();
+            stats.put("pedidosHoy", hoy.pedidos());
+            stats.put("montoVentasHoy", hoy.monto());
+            stats.put("ventasDiarias", estadisticasRepository.buscarVentasUltimosDias(7));
+        } catch (Exception e) {
+            // Sin base disponible la respuesta conserva la ventana completa en ceros
+            stats.put("pedidosHoy", 0L);
+            stats.put("montoVentasHoy", BigDecimal.ZERO);
+            stats.put("ventasDiarias", EstadisticasRepository.ventasEnCeros(7));
+        }
+
         stats.put("estadoServicio", "OPERATIVO");
         stats.put("versionSistema", "1.0.0");
 

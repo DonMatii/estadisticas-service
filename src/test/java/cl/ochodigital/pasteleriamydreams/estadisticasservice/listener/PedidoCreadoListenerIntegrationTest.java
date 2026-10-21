@@ -20,6 +20,7 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -77,7 +78,13 @@ class PedidoCreadoListenerIntegrationTest {
                 .andExpect(jsonPath("$.estadoServicio").value("OPERATIVO"))
                 .andExpect(jsonPath("$.versionSistema").value("1.0.0"))
                 .andExpect(jsonPath("$.pedidosTotales").value(0))
-                .andExpect(jsonPath("$.montoTotalPedidos").value(0));
+                .andExpect(jsonPath("$.montoTotalPedidos").value(0))
+                .andExpect(jsonPath("$.pedidosHoy").value(0))
+                .andExpect(jsonPath("$.montoVentasHoy").value(0))
+                .andExpect(jsonPath("$.ventasDiarias").isArray())
+                .andExpect(jsonPath("$.ventasDiarias.length()").value(7))
+                .andExpect(jsonPath("$.ventasDiarias[0].fecha").value(LocalDate.now().toString()))
+                .andExpect(jsonPath("$.ventasDiarias[0].monto").value(0));
 
         // Un solo productor para todas las publicaciones: Kafka garantiza el orden entre
         // envíos del mismo productor, lo que hace determinista el escenario de duplicado
@@ -101,6 +108,16 @@ class PedidoCreadoListenerIntegrationTest {
                             && montoTotalPedidos().compareTo(new BigDecimal("48990")) == 0,
                     "El duplicado no debía duplicar las métricas");
         }
+
+        // 5) Las ventas del día se acumulan en la fila de hoy dentro de la ventana de 7 días
+        mockMvc.perform(get("/api/estadisticas"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.pedidosHoy").value(2))
+                .andExpect(jsonPath("$.montoVentasHoy").value(48990))
+                .andExpect(jsonPath("$.ventasDiarias.length()").value(7))
+                .andExpect(jsonPath("$.ventasDiarias[0].fecha").value(LocalDate.now().toString()))
+                .andExpect(jsonPath("$.ventasDiarias[0].pedidos").value(2))
+                .andExpect(jsonPath("$.ventasDiarias[0].monto").value(48990));
 
         // Solo los pedidos únicos quedaron registrados para la idempotencia
         List<Map<String, Object>> procesados =

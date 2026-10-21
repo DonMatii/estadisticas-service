@@ -41,7 +41,18 @@ Ejemplo real de la verificación E2E (2 pedidos procesados):
   "versionSistema": "1.0.0",
   "categoriasActivas": 1,
   "totalProductosCatalogo": 1,
-  "montoTotalPedidos": 40000.00
+  "montoTotalPedidos": 40000.00,
+  "pedidosHoy": 2,
+  "montoVentasHoy": 40000.00,
+  "ventasDiarias": [
+    { "fecha": "2026-10-21", "pedidos": 2, "monto": 40000.00 },
+    { "fecha": "2026-10-20", "pedidos": 0, "monto": 0 },
+    { "fecha": "2026-10-19", "pedidos": 0, "monto": 0 },
+    { "fecha": "2026-10-18", "pedidos": 0, "monto": 0 },
+    { "fecha": "2026-10-17", "pedidos": 0, "monto": 0 },
+    { "fecha": "2026-10-16", "pedidos": 0, "monto": 0 },
+    { "fecha": "2026-10-15", "pedidos": 0, "monto": 0 }
+  ]
 }
 ```
 
@@ -51,10 +62,17 @@ Ejemplo real de la verificación E2E (2 pedidos procesados):
 | `categoriasActivas` | `COUNT(DISTINCT categoria)` sobre la tabla `productos`. |
 | `pedidosTotales` | Fila única de la tabla `metricas_pedidos` (alimentada por Kafka, RF-10). |
 | `montoTotalPedidos` | Suma de los montos de los pedidos procesados (RF-10). |
+| `pedidosHoy` | Pedidos procesados hoy, de la fila de hoy en `ventas_diarias`. |
+| `montoVentasHoy` | Monto vendido hoy, de la fila de hoy en `ventas_diarias`. |
+| `ventasDiarias` | Siempre **7 elementos**, de hoy hacia atrás: fecha, pedidos y monto de cada día. Los días sin ventas vienen en cero, para que el panel no muestre huecos. |
 | `estadoServicio` | Siempre `OPERATIVO` cuando el servicio responde. |
 | `versionSistema` | Versión declarada del servicio (`1.0.0`). |
 
-Si la base de datos no está disponible, la respuesta sigue completa: `pedidosTotales` y `montoTotalPedidos` vuelven `0`, y el catálogo usa valores de respaldo.
+Si la base de datos no está disponible, la respuesta sigue completa: `pedidosTotales`, `montoTotalPedidos`, `pedidosHoy` y `montoVentasHoy` vuelven `0`, `ventasDiarias` llega con los 7 días en cero, y el catálogo usa valores de respaldo.
+
+> **Nota sobre la historia:** `ventas_diarias` empieza a llenarse desde el primer pedido que
+> se procese con esta versión. Los montos por día de los pedidos anteriores no se guardaban
+> en ninguna parte, así que los días previos muestran `$0` en lugar de reconstruirse.
 
 ## 📈 Estadísticas de pedidos reales (Kafka, RF-10)
 
@@ -69,8 +87,9 @@ Desde la Entrega 2, `GET /api/estadisticas` incluye estadísticas derivadas de l
 | :--- | :--- |
 | `pedidos_procesados(pedido_id BIGINT PRIMARY KEY, procesado_en TIMESTAMP)` | Idempotencia para la reentrega at-least-once de Kafka: el listener inserta primero el id del pedido; una clave duplicada significa que el evento ya fue contado, así que se omite (nunca se cuenta dos veces). |
 | `metricas_pedidos(id INT PRIMARY KEY, pedidos_totales BIGINT, monto_total DECIMAL(12,2), actualizado_en TIMESTAMP)` | Fila única de agregados que se actualiza (`upsert`) con cada pedido nuevo (`pedidos_totales + 1`, `monto_total + total`). |
+| `ventas_diarias(fecha DATE PRIMARY KEY, pedidos BIGINT, monto DECIMAL(12,2), actualizado_en TIMESTAMP)` | Una fila por calendario con el detalle de ese día (`pedidos + 1`, `monto + total`). Alimenta `pedidosHoy`, `montoVentasHoy` y la ventana de 7 días del panel de administración. Solo se agrega: no reemplaza ni modifica las tablas existentes. |
 
-Ambas se crean con `CREATE TABLE IF NOT EXISTS` en un `@PostConstruct`; si la base no está disponible, el servicio solo avisa en el log y sigue vivo.
+Las tres se crean con `CREATE TABLE IF NOT EXISTS` en un `@PostConstruct`; si la base no está disponible, el servicio solo avisa en el log y sigue vivo.
 
 ### Contrato del evento
 
