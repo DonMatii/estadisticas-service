@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
+import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -66,9 +68,33 @@ public class EstadisticasController {
             stats.put("ventasDiarias", EstadisticasRepository.ventasEnCeros(7));
         }
 
+        // Períodos en curso que gobierna el selector del dashboard: hoy, esta semana (desde
+        // el lunes ISO) y este mes (desde el día 1), siempre terminando en hoy. La JVM decide
+        // "hoy" (mismo reloj que usa ventas_diarias al escribir), así que no hay desfase
+        LocalDate hoy = LocalDate.now();
+        Map<String, Object> ventasPeriodo = new HashMap<>();
+        ventasPeriodo.put("dia", periodo(hoy, hoy));
+        ventasPeriodo.put("semana", periodo(hoy.with(DayOfWeek.MONDAY), hoy));
+        ventasPeriodo.put("mes", periodo(hoy.withDayOfMonth(1), hoy));
+        stats.put("ventasPeriodo", ventasPeriodo);
+
         stats.put("estadoServicio", "OPERATIVO");
         stats.put("versionSistema", "1.0.0");
 
         return stats;
+    }
+
+    // Resumen de un período en curso: el rango consultado junto a sus pedidos y monto.
+    // El repositorio se guarda solo (devuelve ceros sin base), así que el bloque
+    // ventasPeriodo siempre conserva su estructura para el panel
+    private Map<String, Object> periodo(LocalDate desde, LocalDate hasta) {
+        EstadisticasRepository.ResumenRango rango =
+                estadisticasRepository.buscarVentasRango(desde, hasta);
+        Map<String, Object> datos = new HashMap<>();
+        datos.put("desde", desde.toString());
+        datos.put("hasta", hasta.toString());
+        datos.put("pedidos", rango.pedidos());
+        datos.put("monto", rango.monto());
+        return datos;
     }
 }

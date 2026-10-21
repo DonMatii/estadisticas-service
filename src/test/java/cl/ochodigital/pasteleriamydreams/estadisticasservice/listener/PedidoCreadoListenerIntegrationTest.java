@@ -84,7 +84,9 @@ class PedidoCreadoListenerIntegrationTest {
                 .andExpect(jsonPath("$.ventasDiarias").isArray())
                 .andExpect(jsonPath("$.ventasDiarias.length()").value(7))
                 .andExpect(jsonPath("$.ventasDiarias[0].fecha").value(LocalDate.now().toString()))
-                .andExpect(jsonPath("$.ventasDiarias[0].monto").value(0));
+                .andExpect(jsonPath("$.ventasDiarias[0].monto").value(0))
+                .andExpect(jsonPath("$.ventasPeriodo").exists())
+                .andExpect(jsonPath("$.ventasPeriodo.dia.pedidos").value(0));
 
         // Un solo productor para todas las publicaciones: Kafka garantiza el orden entre
         // envíos del mismo productor, lo que hace determinista el escenario de duplicado
@@ -117,7 +119,16 @@ class PedidoCreadoListenerIntegrationTest {
                 .andExpect(jsonPath("$.ventasDiarias.length()").value(7))
                 .andExpect(jsonPath("$.ventasDiarias[0].fecha").value(LocalDate.now().toString()))
                 .andExpect(jsonPath("$.ventasDiarias[0].pedidos").value(2))
-                .andExpect(jsonPath("$.ventasDiarias[0].monto").value(48990));
+                .andExpect(jsonPath("$.ventasDiarias[0].monto").value(48990))
+                // Los 2 pedidos son de hoy, así que caen dentro de la semana y del mes en curso
+                .andExpect(jsonPath("$.ventasPeriodo.dia.pedidos").value(2))
+                .andExpect(jsonPath("$.ventasPeriodo.dia.monto").value(48990))
+                .andExpect(jsonPath("$.ventasPeriodo.semana.pedidos").value(2))
+                .andExpect(jsonPath("$.ventasPeriodo.semana.monto").value(48990))
+                .andExpect(jsonPath("$.ventasPeriodo.mes.pedidos").value(2))
+                .andExpect(jsonPath("$.ventasPeriodo.mes.monto").value(48990))
+                .andExpect(jsonPath("$.ventasPeriodo.semana.desde").exists())
+                .andExpect(jsonPath("$.ventasPeriodo.mes.desde").exists());
 
         // Solo los pedidos únicos quedaron registrados para la idempotencia
         List<Map<String, Object>> procesados =

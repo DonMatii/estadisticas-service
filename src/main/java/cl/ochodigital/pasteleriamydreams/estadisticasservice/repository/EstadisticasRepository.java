@@ -208,11 +208,34 @@ public class EstadisticasRepository {
         return new ArrayList<>(porFecha.values());
     }
 
+    // Suma de pedidos y monto de las ventas_diarias dentro de [desde, hasta]; sin filas o
+    // sin base devuelve ceros, para que la respuesta del panel conserve su estructura
+    public ResumenRango buscarVentasRango(LocalDate desde, LocalDate hasta) {
+        try {
+            return jdbcTemplate.query("""
+                    SELECT COALESCE(SUM(pedidos), 0) AS pedidos, COALESCE(SUM(monto), 0) AS monto
+                    FROM ventas_diarias
+                    WHERE fecha >= ? AND fecha <= ?
+                    """, (rs, i) -> new ResumenRango(rs.getLong("pedidos"), rs.getBigDecimal("monto")),
+                    desde, hasta)
+                    .stream()
+                    .findFirst()
+                    .orElse(new ResumenRango(0L, BigDecimal.ZERO));
+        } catch (Exception e) {
+            log.warn("No se pudieron leer las ventas del rango {}..{}: {}", desde, hasta, e.getMessage());
+            return new ResumenRango(0L, BigDecimal.ZERO);
+        }
+    }
+
     // Agregado simple que alimenta los campos pedidosTotales y montoTotalPedidos
     public record MetricasPedidos(Long pedidosTotales, BigDecimal montoTotalPedidos) {
     }
 
     // Una fila por calendario: cuántos pedidos hubo y cuánto se vendió ese día
     public record VentaDiaria(LocalDate fecha, Long pedidos, BigDecimal monto) {
+    }
+
+    // Agregado de un rango de fechas: pedidos y monto sumados de ese período
+    public record ResumenRango(Long pedidos, BigDecimal monto) {
     }
 }

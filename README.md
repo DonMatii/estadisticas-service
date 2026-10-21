@@ -52,7 +52,12 @@ Ejemplo real de la verificación E2E (2 pedidos procesados):
     { "fecha": "2026-10-17", "pedidos": 0, "monto": 0 },
     { "fecha": "2026-10-16", "pedidos": 0, "monto": 0 },
     { "fecha": "2026-10-15", "pedidos": 0, "monto": 0 }
-  ]
+  ],
+  "ventasPeriodo": {
+    "dia":    { "desde": "2026-10-21", "hasta": "2026-10-21", "pedidos": 2, "monto": 40000.00 },
+    "semana": { "desde": "2026-10-19", "hasta": "2026-10-21", "pedidos": 2, "monto": 40000.00 },
+    "mes":    { "desde": "2026-10-01", "hasta": "2026-10-21", "pedidos": 2, "monto": 40000.00 }
+  }
 }
 ```
 
@@ -65,10 +70,11 @@ Ejemplo real de la verificación E2E (2 pedidos procesados):
 | `pedidosHoy` | Pedidos procesados hoy, de la fila de hoy en `ventas_diarias`. |
 | `montoVentasHoy` | Monto vendido hoy, de la fila de hoy en `ventas_diarias`. |
 | `ventasDiarias` | Siempre **7 elementos**, de hoy hacia atrás: fecha, pedidos y monto de cada día. Los días sin ventas vienen en cero, para que el panel no muestre huecos. |
+| `ventasPeriodo` | Tres períodos **en curso** (hoy, semana desde el lunes ISO, mes desde el día 1) con su `desde`, `hasta`, `pedidos` y `monto`. Alimenta el selector de período del dashboard de administración. |
 | `estadoServicio` | Siempre `OPERATIVO` cuando el servicio responde. |
 | `versionSistema` | Versión declarada del servicio (`1.0.0`). |
 
-Si la base de datos no está disponible, la respuesta sigue completa: `pedidosTotales`, `montoTotalPedidos`, `pedidosHoy` y `montoVentasHoy` vuelven `0`, `ventasDiarias` llega con los 7 días en cero, y el catálogo usa valores de respaldo.
+Si la base de datos no está disponible, la respuesta sigue completa: `pedidosTotales`, `montoTotalPedidos`, `pedidosHoy` y `montoVentasHoy` vuelven `0`, `ventasDiarias` llega con los 7 días en cero, `ventasPeriodo` conserva sus tres períodos en cero, y el catálogo usa valores de respaldo.
 
 > **Nota sobre la historia:** `ventas_diarias` empieza a llenarse desde el primer pedido que
 > se procese con esta versión. Los montos por día de los pedidos anteriores no se guardaban
