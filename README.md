@@ -71,7 +71,7 @@ Ejemplo real de la verificación E2E (2 pedidos procesados):
 | `montoTotalPedidos` | Suma de los montos de los pedidos procesados (RF-10). |
 | `pedidosHoy` | Pedidos procesados hoy, de la fila de hoy en `ventas_diarias`. |
 | `montoVentasHoy` | Monto vendido hoy, de la fila de hoy en `ventas_diarias`. |
-| `ventasDiarias` | Siempre **7 elementos**, de hoy hacia atrás: fecha, pedidos y monto de cada día. Los días sin ventas vienen en cero, para que el panel no muestre huecos. |
+| `ventasDiarias` | Siempre **7 elementos**, de hoy hacia atrás: fecha, pedidos y monto de cada día. Los días sin ventas vienen en cero, para que el panel no muestre huecos. Cada pedido se atribuye a la **fecha en que se emitió** (no a la de procesamiento), de modo que un replay de Kafka no desplaza las ventas al día equivocado. |
 | `ventasPeriodo` | Tres períodos **en curso** (hoy, semana desde el lunes ISO, mes desde el día 1) con su `desde`, `hasta`, `pedidos` y `monto`. Alimenta el selector de período del dashboard de administración. |
 | `metas` | Metas de ventas por período (`dia`, `semana`, `mes`) que la administración define con `PUT /api/estadisticas/metas`. En `0` significa meta sin definir (la barra de avance lo muestra como pendiente). |
 | `estadoServicio` | Siempre `OPERATIVO` cuando el servicio responde. |
