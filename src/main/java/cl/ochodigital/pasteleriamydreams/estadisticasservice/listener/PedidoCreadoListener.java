@@ -33,7 +33,7 @@ public class PedidoCreadoListener {
             if (esNuevo) {
                 log.info("Pedido {} incorporado a las estadísticas", evento.id());
             } else {
-                log.debug("Pedido {} ya estaba procesado: se omite el doble conteo", evento.id());
+                log.warn("Pedido {} ya estaba procesado: se omite el doble conteo", evento.id());
             }
         } catch (Exception e) {
             // Tolerancia a veneno: un mensaje ilegible o no procesable se registra y se salta,
