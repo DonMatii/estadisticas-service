@@ -85,9 +85,11 @@ public class EstadisticasRepository {
     }
 
     // Idempotencia para la reentrega at-least-once de Kafka: primero se marca el pedido;
-    // si la clave ya existía, se omite y no se vuelve a contar
+    // si la clave ya existía, se omite y no se vuelve a contar.
+    // fechaPedido es la fecha real del pedido (evento.fecha): la venta se acumula al dia que
+    // ocurrió, no al dia en que el consumidor la procesa, para que los replays no la muevan
     @Transactional
-    public boolean procesarPedido(Long pedidoId, BigDecimal monto) {
+    public boolean procesarPedido(Long pedidoId, BigDecimal monto, LocalDate fechaPedido) {
         try {
             jdbcTemplate.update(
                     "INSERT INTO pedidos_procesados (pedido_id, procesado_en) VALUES (?, CURRENT_TIMESTAMP)",
@@ -97,7 +99,7 @@ public class EstadisticasRepository {
         }
 
         actualizarMetricas(monto);
-        actualizarVentasDiarias(LocalDate.now(), monto);
+        actualizarVentasDiarias(fechaPedido, monto);
         return true;
     }
 
@@ -143,8 +145,9 @@ public class EstadisticasRepository {
                 .orElse(new MetricasPedidos(0L, BigDecimal.ZERO));
     }
 
-    // Suma el monto del pedido a la fila de su día. La clave es la fecha, así que la misma
-    // fuente (la JVM) decide qué es "hoy" al escribir y al leer: no hay desfase de huso horario
+    // Suma el monto del pedido a la fila de su día. La clave es la fecha real del pedido
+    // (evento.fecha), así que un replay o una reentrega de Kafka no desplaza la venta al
+    // día equivocado aunque el consumidor la procese más tarde
     private void actualizarVentasDiarias(LocalDate fecha, BigDecimal monto) {
         int actualizadas = jdbcTemplate.update("""
                 UPDATE ventas_diarias

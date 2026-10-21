@@ -29,7 +29,11 @@ public class PedidoCreadoListener {
     public void onPedidoCreado(String mensaje) {
         try {
             PedidoCreadoEvent evento = objectMapper.readValue(mensaje, PedidoCreadoEvent.class);
-            boolean esNuevo = repositorio.procesarPedido(evento.id(), BigDecimal.valueOf(evento.total()));
+            // La venta se atribuye al dia del PEDIDO (evento.fecha), no al dia en que el
+            // consumidor la procesa: con reentrega o replay de Kafka, usar LocalDate.now()
+            // desplazaba la venta al dia equivocado y ventas_diarias se desincronizaba
+            boolean esNuevo = repositorio.procesarPedido(
+                    evento.id(), BigDecimal.valueOf(evento.total()), evento.fecha().toLocalDate());
             if (esNuevo) {
                 log.info("Pedido {} incorporado a las estadísticas", evento.id());
             } else {
