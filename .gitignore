@@ -41,3 +41,7 @@ build/
 .atl/
 .codegraph/
 odd/
+
+# Logs locales de arranque (nunca se commitean)
+run.log
+run-err.log
