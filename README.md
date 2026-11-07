@@ -39,6 +39,7 @@ Ejemplo real de la verificación E2E (2 pedidos procesados):
 {
   "pedidosTotales": 2,
   "estadoServicio": "OPERATIVO",
+  "datosCompletos": true,
   "versionSistema": "1.0.0",
   "categoriasActivas": 1,
   "totalProductosCatalogo": 1,
@@ -65,6 +66,8 @@ Ejemplo real de la verificación E2E (2 pedidos procesados):
 
 | Campo | Origen |
 | :--- | :--- |
+| `estadoServicio` | `OPERATIVO` cuando todos los bloques respondieron; `DEGRADADO` cuando alguno falló y la respuesta se completó con ceros de respaldo. |
+| `datosCompletos` | `false` cuando al menos un bloque falló: ese cero **no se leyó de la base**, así que el panel muestra `—` en vez de `$0`. |
 | `totalProductosCatalogo` | `COUNT(*)` sobre la tabla `productos`. |
 | `categoriasActivas` | `COUNT(DISTINCT categoria)` sobre la tabla `productos`. |
 | `pedidosTotales` | Fila única de la tabla `metricas_pedidos` (alimentada por Kafka, RF-10). |

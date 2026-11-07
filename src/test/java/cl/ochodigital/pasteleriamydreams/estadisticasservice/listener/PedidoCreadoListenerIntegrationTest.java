@@ -8,6 +8,7 @@ import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.StringSerializer;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -68,6 +69,27 @@ class PedidoCreadoListenerIntegrationTest {
     @Autowired
     private MockMvc mockMvc;
 
+    // El H2 de este contexto no nace con la tabla de catálogo y las estadísticas la leen
+    // para el total de productos. Sin ella ese bloque falla, el endpoint responde
+    // DEGRADADO y el total sale del respaldo 17 (un número inventado). Se crea la tabla
+    // para que el contexto de este test sea tan sano como el de producción
+    @BeforeEach
+    void crearTablaDeCatalogo() {
+        jdbcTemplate.execute("""
+                CREATE TABLE IF NOT EXISTS productos (
+                    id BIGINT PRIMARY KEY,
+                    nombre VARCHAR(255) NOT NULL,
+                    precio DECIMAL(12,2) NOT NULL,
+                    categoria VARCHAR(255),
+                    activo BOOLEAN
+                )
+                """);
+        jdbcTemplate.update("""
+                MERGE INTO productos (id, nombre, precio, categoria, activo) KEY(id)
+                VALUES (1, 'Torta Chocolate', 15000, 'Nuestras Tortas', TRUE)
+                """);
+    }
+
     @Test
     void procesaPedidosRealesDeFormaIdempotente() throws Exception {
         // 1) Sin eventos: el endpoint conserva sus campos existentes y trae los nuevos en cero
@@ -76,6 +98,7 @@ class PedidoCreadoListenerIntegrationTest {
                 .andExpect(jsonPath("$.totalProductosCatalogo").exists())
                 .andExpect(jsonPath("$.categoriasActivas").exists())
                 .andExpect(jsonPath("$.estadoServicio").value("OPERATIVO"))
+                .andExpect(jsonPath("$.datosCompletos").value(true))
                 .andExpect(jsonPath("$.versionSistema").value("1.0.0"))
                 .andExpect(jsonPath("$.pedidosTotales").value(0))
                 .andExpect(jsonPath("$.montoTotalPedidos").value(0))

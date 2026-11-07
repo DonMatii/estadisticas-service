@@ -31,6 +31,10 @@ public class EstadisticasController {
     public Map<String, Object> obtenerEstadisticas() {
         Map<String, Object> stats = new HashMap<>();
 
+        // Cada bloque traga su propia excepción y responde con ceros. Ese cero no se leyó
+        // de la base, así que hay que avisarlo: un 0 leído y un 0 inventado no son lo mismo
+        boolean datosCompletos = true;
+
         try {
             // Contamos los productos reales directo desde la base de datos de AWS RDS
             Long totalProductos = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM productos", Long.class);
@@ -44,6 +48,7 @@ public class EstadisticasController {
             // Si llega a haber algún detalle con la tabla, dejamos un respaldo seguro
             stats.put("totalProductosCatalogo", 17);
             stats.put("categoriasActivas", 4);
+            datosCompletos = false;
         }
 
         try {
@@ -55,6 +60,7 @@ public class EstadisticasController {
             // Sin base disponible la respuesta sigue completa con ceros
             stats.put("pedidosTotales", 0L);
             stats.put("montoTotalPedidos", BigDecimal.ZERO);
+            datosCompletos = false;
         }
 
         try {
@@ -68,6 +74,7 @@ public class EstadisticasController {
             stats.put("pedidosHoy", 0L);
             stats.put("montoVentasHoy", BigDecimal.ZERO);
             stats.put("ventasDiarias", EstadisticasRepository.ventasEnCeros(7));
+            datosCompletos = false;
         }
 
         // Períodos en curso que gobierna el selector del dashboard: hoy, esta semana (desde
@@ -83,7 +90,10 @@ public class EstadisticasController {
         // Metas por período para la barra de avance; en cero significa "sin meta definida"
         stats.put("metas", mapaMetas(estadisticasRepository.buscarMetas()));
 
-        stats.put("estadoServicio", "OPERATIVO");
+        // estadoServicio ya no está hardcodeado: con la base caída el endpoint responde
+        // DEGRADADO y datosCompletos=false, que es lo que el panel usa para no pintar $0
+        stats.put("estadoServicio", datosCompletos ? "OPERATIVO" : "DEGRADADO");
+        stats.put("datosCompletos", datosCompletos);
         stats.put("versionSistema", "1.0.0");
 
         return stats;
