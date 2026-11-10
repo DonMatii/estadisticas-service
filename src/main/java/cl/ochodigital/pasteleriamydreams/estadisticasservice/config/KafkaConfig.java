@@ -61,9 +61,9 @@ public class KafkaConfig {
                 IllegalArgumentException.class,
                 DeserializationException.class);
 
-        // Trazabilidad: cada reintento y la entrega final a la DLQ quedan en log
+        // Trazabilidad: cada intento y la entrega final a la DLQ quedan en log
         manejador.setRetryListeners((registro, error, intento) ->
-                log.warn("Reintento #{} para el mensaje de {} (clave {}): {}",
+                log.warn("Intento #{} falló para el mensaje de {} (clave {}): {}",
                         intento, registro.topic(), registro.key(), error.getMessage()));
 
         ConcurrentKafkaListenerContainerFactory<String, String> fabrica =
