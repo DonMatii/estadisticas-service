@@ -49,6 +49,20 @@
             <artifactId>spring-kafka</artifactId>
         </dependency>
 
+        <!-- AWS SDK v2 para Kinesis: consumidor del stream de eventos de
+             negocio (Entrega 3). Endpoint configurable: LocalStack en local,
+             Kinesis real del lab sin cambiar código -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>kinesis</artifactId>
+            <version>2.25.60</version>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>url-connection-client</artifactId>
+            <version>2.25.60</version>
+        </dependency>
+
         <!-- Starter de pruebas correcto -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

@@ -10,10 +10,13 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
-// Consume el topic `pedidos` y alimenta las estadísticas con pedidos reales (RF-10)
+// Consume el topic `pedidos` y alimenta las estadísticas con pedidos reales (RF-10).
+// También implementa la puerta del stream de Kinesis (Entrega 3): la misma
+// agregación se alimenta desde la cola o desde el stream sin duplicar lógica.
 @Component
-public class PedidoCreadoListener {
+public class PedidoCreadoListener implements EstadisticasEventosHandler {
 
     private static final Logger log = LoggerFactory.getLogger(PedidoCreadoListener.class);
 
@@ -37,13 +40,8 @@ public class PedidoCreadoListener {
             // La venta se atribuye al dia del PEDIDO (evento.fecha), no al dia en que el
             // consumidor la procesa: con reentrega o replay de Kafka, usar LocalDate.now()
             // desplazaba la venta al dia equivocado y ventas_diarias se desincronizaba
-            boolean esNuevo = repositorio.procesarPedido(
-                    evento.id(), BigDecimal.valueOf(evento.total()), evento.fecha().toLocalDate());
-            if (esNuevo) {
-                log.info("Pedido {} incorporado a las estadísticas", evento.id());
-            } else {
-                log.warn("Pedido {} ya estaba procesado: se omite el doble conteo", evento.id());
-            }
+            procesarPedidoCreado(evento.id(), BigDecimal.valueOf(evento.total()),
+                    evento.fecha().toLocalDate());
         } catch (JsonProcessingException | IllegalArgumentException e) {
             // Falla DEFINITIVA: payload ilegible o evento inválido -> sin
             // reintentos, el error handler lo aísla en la DLQ para revisión
@@ -57,6 +55,19 @@ public class PedidoCreadoListener {
             log.error("Fallo recuperable procesando el evento. Payload: {} - Razón: {}",
                     mensaje, e.getMessage());
             throw e instanceof RuntimeException ? (RuntimeException) e : new IllegalStateException(e);
+        }
+    }
+
+    // Puerta única de la agregación: la usan el consumidor de Kafka (arriba) y
+    // el consumidor del stream de Kinesis (Entrega 3). Idempotente por pedidoId:
+    // un replay nunca cuenta la venta dos veces.
+    @Override
+    public void procesarPedidoCreado(Long pedidoId, BigDecimal total, LocalDate fechaPedido) {
+        boolean esNuevo = repositorio.procesarPedido(pedidoId, total, fechaPedido);
+        if (esNuevo) {
+            log.info("Pedido {} incorporado a las estadísticas", pedidoId);
+        } else {
+            log.warn("Pedido {} ya estaba procesado: se omite el doble conteo", pedidoId);
         }
     }
 }

@@ -153,6 +153,10 @@ La conexión a la base de datos se configura por variables de entorno (RNF-11; n
 
 Otras propiedades relevantes (`src/main/resources/application.properties`): `server.port=8081`, `spring.kafka.bootstrap-servers=localhost:19092`, `app.kafka.topic=pedidos`.
 
+### Consumidor del stream de Kinesis (Entrega 3 — streaming de datos)
+
+Además de la cola de Kafka, este servicio **consume el stream `eventos-negocio`** (`KinesisEventosConsumer`): recorre los shards en orden con checkpoint por shard y alimenta la MISMA agregación que usa el consumidor de Kafka (`EstadisticasEventosHandler`, implementado por `PedidoCreadoListener`). El procesamiento es **idempotente por pedidoId**: un evento que llegue por los dos caminos —o por replay del stream— se cuenta **una sola vez** (demostrado en vivo: "Pedido N ya estaba procesado: se omite el doble conteo"). Política de errores del stream: el evento ilegible o de tipo desconocido se **registra completo y se salta** (el registro sigue en el stream para reproceso manual) y una falla transitoria no tumba el bucle. Config: `app.kinesis.habilitado`, `app.kinesis.endpoint` (vacío = AWS real), `app.kinesis.stream`. En las pruebas el consumidor se desactiva (`app.kinesis.habilitado=false`): los tests nunca dependen de un stream externo.
+
 ### Manejo de errores: reintentos y DLQ (política de la cola)
 
 El consumidor distingue tres escenarios: **éxito** (idempotente, un pedido cuenta una vez), **error recuperable** (base caída: reintento con backoff fijo — `app.kafka.reintentos.max` y `app.kafka.reintentos.espera-ms` — y solo si persiste se aísla) y **error definitivo** (payload ilegible o evento sin id: sin reintentos, directo a la DLQ). Los mensajes fallidos terminan en **`pedidos.DLT`** con el payload y el motivo en los headers, para revisión manual; cada reintento y cada aislamiento quedan en el log (`KafkaConfig`).

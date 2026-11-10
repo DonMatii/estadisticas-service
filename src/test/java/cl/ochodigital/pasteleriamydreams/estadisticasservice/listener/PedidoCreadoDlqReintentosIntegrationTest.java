@@ -34,6 +34,7 @@ import static org.mockito.Mockito.*;
 @SpringBootTest
 @EmbeddedKafka(partitions = 1, topics = {"pedidos", "pedidos.DLT"})
 @TestPropertySource(properties = {
+        "app.kinesis.habilitado=false",
         "spring.kafka.bootstrap-servers=${spring.embedded.kafka.brokers}",
         "spring.kafka.consumer.auto-offset-reset=earliest",
         "app.kafka.topic=pedidos",
