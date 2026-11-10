@@ -2,6 +2,7 @@ package cl.ochodigital.pasteleriamydreams.estadisticasservice.listener;
 
 import cl.ochodigital.pasteleriamydreams.estadisticasservice.event.PedidoCreadoEvent;
 import cl.ochodigital.pasteleriamydreams.estadisticasservice.repository.EstadisticasRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,6 +30,10 @@ public class PedidoCreadoListener {
     public void onPedidoCreado(String mensaje) {
         try {
             PedidoCreadoEvent evento = objectMapper.readValue(mensaje, PedidoCreadoEvent.class);
+            if (evento == null || evento.id() == null) {
+                log.error("Evento sin id, se aísla en la DLQ: {}", mensaje);
+                throw new IllegalArgumentException("evento sin id de pedido");
+            }
             // La venta se atribuye al dia del PEDIDO (evento.fecha), no al dia en que el
             // consumidor la procesa: con reentrega o replay de Kafka, usar LocalDate.now()
             // desplazaba la venta al dia equivocado y ventas_diarias se desincronizaba
@@ -39,10 +44,19 @@ public class PedidoCreadoListener {
             } else {
                 log.warn("Pedido {} ya estaba procesado: se omite el doble conteo", evento.id());
             }
+        } catch (JsonProcessingException | IllegalArgumentException e) {
+            // Falla DEFINITIVA: payload ilegible o evento inválido -> sin
+            // reintentos, el error handler lo aísla en la DLQ para revisión
+            log.error("Mensaje definitivamente inválido, va a la DLQ. Payload: {} - Razón: {}",
+                    mensaje, e.getMessage());
+            throw new IllegalArgumentException("evento de pedido inválido", e);
         } catch (Exception e) {
-            // Tolerancia a veneno: un mensaje ilegible o no procesable se registra y se salta,
-            // nunca se lanza excepción para afuera y el consumidor sigue vivo
-            log.warn("Evento de pedido no procesable omitido: {}", e.getMessage());
+            // Falla TRANSITORIA (base caída, infra): se relanza para que el
+            // error handler reintente y, solo si persiste, lo lleve a la DLQ.
+            // El "log y skip" anterior perdía la venta en silencio.
+            log.error("Fallo recuperable procesando el evento. Payload: {} - Razón: {}",
+                    mensaje, e.getMessage());
+            throw e instanceof RuntimeException ? (RuntimeException) e : new IllegalStateException(e);
         }
     }
 }

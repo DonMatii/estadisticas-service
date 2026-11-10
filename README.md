@@ -153,6 +153,10 @@ La conexión a la base de datos se configura por variables de entorno (RNF-11; n
 
 Otras propiedades relevantes (`src/main/resources/application.properties`): `server.port=8081`, `spring.kafka.bootstrap-servers=localhost:19092`, `app.kafka.topic=pedidos`.
 
+### Manejo de errores: reintentos y DLQ (política de la cola)
+
+El consumidor distingue tres escenarios: **éxito** (idempotente, un pedido cuenta una vez), **error recuperable** (base caída: reintento con backoff fijo — `app.kafka.reintentos.max` y `app.kafka.reintentos.espera-ms` — y solo si persiste se aísla) y **error definitivo** (payload ilegible o evento sin id: sin reintentos, directo a la DLQ). Los mensajes fallidos terminan en **`pedidos.DLT`** con el payload y el motivo en los headers, para revisión manual; cada reintento y cada aislamiento quedan en el log (`KafkaConfig`).
+
 ## ▶️ Cómo correrlo local
 
 Requisitos: JDK 21, MySQL 8 local con la base `pasteleria_my_dreams` y el broker Kafka arriba:
