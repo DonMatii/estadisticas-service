@@ -139,7 +139,7 @@ docker compose up -d
 | :--- | :--- |
 | Topic | `pedidos` (compartido con `pedidos-service`) |
 | Consumer group | `estadisticas` |
-| Broker | `localhost:9092` |
+| Broker | `localhost:19092` |
 
 ## ⚙️ Variables de entorno
 
@@ -151,7 +151,7 @@ La conexión a la base de datos se configura por variables de entorno (RNF-11; n
 | `DB_USER` | `root` |
 | `DB_PASS` | *(vacío)* |
 
-Otras propiedades relevantes (`src/main/resources/application.properties`): `server.port=8081`, `spring.kafka.bootstrap-servers=localhost:9092`, `app.kafka.topic=pedidos`.
+Otras propiedades relevantes (`src/main/resources/application.properties`): `server.port=8081`, `spring.kafka.bootstrap-servers=localhost:19092`, `app.kafka.topic=pedidos`.
 
 ## ▶️ Cómo correrlo local
 
