@@ -140,6 +140,9 @@ public class KinesisEventosConsumer {
                         BigDecimal.valueOf(evento.path("total").asDouble()),
                         LocalDate.parse(evento.path("fecha").asText().substring(0, 10)));
                 log.info("Evento del stream procesado: pedido {}", evento.path("id").asLong());
+            } else if ("ProductoVisto".equals(tipo)) {
+                handler.procesarProductoVisto(evento.path("id").asLong());
+                log.info("Evento del stream procesado: producto {} visto", evento.path("id").asLong());
             } else {
                 // Tipo desconocido: se registra completo para revisión y se salta
                 log.warn("Evento de tipo '{}' no reconocido en el stream, registrado y omitido: {}",

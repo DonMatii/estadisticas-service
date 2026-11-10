@@ -9,4 +9,6 @@ import java.time.LocalDate;
 public interface EstadisticasEventosHandler {
 
     void procesarPedidoCreado(Long pedidoId, BigDecimal total, LocalDate fechaPedido);
+
+    void procesarProductoVisto(Long productoId);
 }

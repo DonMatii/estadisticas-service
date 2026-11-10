@@ -61,6 +61,20 @@ class KinesisEventosConsumerTest {
     }
 
     @Test
+    void losEventosProductoVistoSeRutanAlContadorDeVistas() {
+        prepararShardCon(List.of(
+                registro("{\"evento\":\"ProductoVisto\",\"id\":77,\"fecha\":\"2026-11-10T20:00:00\"}")));
+
+        KinesisEventosConsumer consumer = consumer();
+        consumer.iniciar();
+        try {
+            verify(handler, timeout(10_000)).procesarProductoVisto(77L);
+        } finally {
+            consumer.detener();
+        }
+    }
+
+    @Test
     void noSeRepiteLoYaProcesadoAlVolverAScanear() {
         // Primera pasada: un evento; después, vacío. El checkpoint por shard
         // evita volver a entregar lo ya procesado.

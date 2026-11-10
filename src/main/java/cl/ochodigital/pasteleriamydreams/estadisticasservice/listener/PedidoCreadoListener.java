@@ -70,4 +70,11 @@ public class PedidoCreadoListener implements EstadisticasEventosHandler {
             log.warn("Pedido {} ya estaba procesado: se omite el doble conteo", pedidoId);
         }
     }
+
+    // "Productos más vistos" (Entrega 3): cada vista del stream suma al contador
+    @Override
+    public void procesarProductoVisto(Long productoId) {
+        repositorio.registrarVista(productoId);
+        log.info("Producto {} registrado como visto", productoId);
+    }
 }

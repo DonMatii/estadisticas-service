@@ -27,6 +27,13 @@ public class EstadisticasController {
     @Autowired
     private EstadisticasRepository estadisticasRepository;
 
+    // "Productos más vistos" (Entrega 3): el conteo llega del stream de Kinesis
+    // (evento producto_visto) y expone el top para el dashboard
+    @GetMapping("/productos-vistos")
+    public java.util.List<java.util.Map<String, Object>> productosVistos() {
+        return estadisticasRepository.productosMasVistos(10);
+    }
+
     @GetMapping
     public Map<String, Object> obtenerEstadisticas() {
         Map<String, Object> stats = new HashMap<>();

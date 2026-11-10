@@ -78,6 +78,15 @@ public class EstadisticasRepository {
                         actualizado_en TIMESTAMP NOT NULL
                     )
                     """);
+            // Contador de "productos vistos" (Entrega 3): cada evento
+            // producto_visto del stream suma una exposición por producto
+            jdbcTemplate.execute("""
+                    CREATE TABLE IF NOT EXISTS productos_vistos (
+                        producto_id BIGINT PRIMARY KEY,
+                        vistas BIGINT NOT NULL,
+                        actualizado_en TIMESTAMP NOT NULL
+                    )
+                    """);
             log.info("Tablas de estadísticas de pedidos verificadas");
         } catch (Exception e) {
             log.warn("No se pudieron crear las tablas de estadísticas: {}", e.getMessage());
@@ -101,6 +110,52 @@ public class EstadisticasRepository {
         actualizarMetricas(monto);
         actualizarVentasDiarias(fechaPedido, monto);
         return true;
+    }
+
+    // Contador de "productos vistos" (Entrega 3): el evento producto_visto del
+    // stream suma una exposición. Límite conocido: es un contador de vistas, no
+    // de visitantes únicos — un replay del stream puede sumar de más (el front
+    // lo amortigua con una vista por producto y por sesión).
+    public void registrarVista(Long productoId) {
+        int actualizadas = jdbcTemplate.update("""
+                UPDATE productos_vistos
+                SET vistas = vistas + 1, actualizado_en = CURRENT_TIMESTAMP
+                WHERE producto_id = ?
+                """, productoId);
+        if (actualizadas == 0) {
+            try {
+                jdbcTemplate.update("""
+                        INSERT INTO productos_vistos (producto_id, vistas, actualizado_en)
+                        VALUES (?, 1, CURRENT_TIMESTAMP)
+                        """, productoId);
+            } catch (DuplicateKeyException e) {
+                jdbcTemplate.update("""
+                        UPDATE productos_vistos
+                        SET vistas = vistas + 1, actualizado_en = CURRENT_TIMESTAMP
+                        WHERE producto_id = ?
+                        """, productoId);
+            }
+        }
+    }
+
+    // Top de productos más vistos para el dashboard. Las claves del JSON se
+    // fijan aquí y no se dejan al driver: H2 devuelve los nombres en
+    // mayúsculas y MySQL en minúsculas, y el contrato del endpoint debe ser el
+    // mismo en local, en pruebas y en el lab (el lookup por nombre del ResultSet
+    // es insensible a mayúsculas por especificación JDBC).
+    public java.util.List<java.util.Map<String, Object>> productosMasVistos(int limite) {
+        return jdbcTemplate.query("""
+                SELECT producto_id, vistas FROM productos_vistos
+                ORDER BY vistas DESC, producto_id ASC
+                LIMIT ?
+                """,
+                (rs, numFila) -> {
+                    java.util.Map<String, Object> fila = new java.util.LinkedHashMap<>();
+                    fila.put("producto_id", rs.getLong("producto_id"));
+                    fila.put("vistas", rs.getLong("vistas"));
+                    return fila;
+                },
+                limite);
     }
 
     // Upsert de la fila única de agregados: incrementa los contadores o crea la fila con el primer pedido
