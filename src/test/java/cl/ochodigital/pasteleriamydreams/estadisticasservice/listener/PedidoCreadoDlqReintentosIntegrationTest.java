@@ -30,7 +30,7 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-// VERIFIER PROBE (scratch only): retry/DLQ contract of the statistics consumer.
+// SONDA DE VERIFICACIÓN (solo scratch): contrato de reintentos/DLQ del consumidor de estadísticas.
 @SpringBootTest
 @EmbeddedKafka(partitions = 1, topics = {"pedidos", "pedidos.DLT"})
 @TestPropertySource(properties = {
